@@ -1,4 +1,8 @@
-﻿namespace Simple_NosTale_Packet_Sniffer
+﻿using PacketDotNet;
+using SharpPcap;
+using System.Net;
+
+namespace Simple_NosTale_Packet_Sniffer
 {
     public class Program
     {
@@ -7,7 +11,70 @@
 
         public static void Main(string[] args)
         {
-            Console.WriteLine("Hello, World!");
+            var devices = CaptureDeviceList.Instance;
+
+            if (devices.Count < 1)
+            {
+                Console.WriteLine("No devices were found on this machine");
+                Console.ReadLine();
+                return;
+            }
+
+            var device = devices.First();
+            device.OnPacketArrival += Device_OnPacketArrival;
+            device.Open(DeviceModes.Promiscuous, 1000);
+
+            Console.WriteLine("-- Listening on {0} Network", device.Description);
+
+            device.StartCapture();
+
+            Console.ReadLine();
+
+            device.StopCapture();
+            device.Close();
+        }
+
+        private static void Device_OnPacketArrival(object sender, PacketCapture e)
+        {
+            var rawPacket = e.GetPacket();
+            var packet = Packet.ParsePacket(rawPacket.LinkLayerType, rawPacket.Data);
+
+            var tcpPacket = packet.Extract<TcpPacket>();
+            if (tcpPacket == null)
+            {
+                return;
+            }
+            var ipPacket = (IPPacket)((EthernetPacket)packet).PayloadPacket;
+            IPAddress srcIp = ipPacket.SourceAddress;
+            IPAddress dstIp = ipPacket.DestinationAddress;
+            Packet payloadPacket = tcpPacket;
+            byte[] data = payloadPacket.PayloadData;
+
+            if (data.Length <= 0 && (data.Length != 1 || data[0] == 0x00)) return;
+
+            if (srcIp.ToString().Equals(StaticConfig.GameForgeLoginIp))
+            {
+                ParseLoginReceivePacket(data);
+                return;
+            }
+
+            if (dstIp.ToString().Equals(StaticConfig.GameForgeLoginIp))
+            {
+                ParseLoginSendPacket(data);
+                return;
+            }
+
+            if (srcIp.ToString().Equals(StaticConfig.GameForgeAsgobasServerIp))
+            {
+                ParseWorldReceivePacket(data);
+                return;
+            }
+
+            if (dstIp.ToString().Equals(StaticConfig.GameForgeAsgobasServerIp))
+            {
+                ParseWorldSendPacket(data);
+                return;
+            }
         }
 
         private static void ParseLoginReceivePacket(byte[] data)
