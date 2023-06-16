@@ -1,41 +1,45 @@
-﻿using System.Text;
+﻿using PacketDotNet;
+using System.Text;
 
 namespace Simple_NosTale_Packet_Sniffer
 {
     public class LoginPacketExtension
     {
-        public static string ServerToClient(byte[] data)
+        public static string ServerToClient(in ReadOnlySpan<byte> str)
         {
             try
             {
-                StringBuilder builder = new StringBuilder();
-                foreach (byte character in data)
+                var output = new StringBuilder(str.Length);
+                foreach (var c in str)
                 {
-                    if (character > 14)
-                    {
-                        builder.Append(Convert.ToChar((character - 15) ^ 195));
-                    }
-                    else
-                    {
-                        builder.Append(Convert.ToChar((256 - (15 - character)) ^ 195));
-                    }
+                    output.Append(Convert.ToChar((byte)((c - 0xF) % 256)));
                 }
-                return builder.ToString();
+
+                return output.ToString();
             }
-            catch (Exception)
+            catch
             {
-                return "";
+                return string.Empty;
             }
         }
 
-        public static string ClientToServer(byte[] bytes)
+
+        public static string ClientToServer(in ReadOnlySpan<byte> bytes)
         {
-            var output = "";
-            for (var i = 0; i < bytes.Length; i++)
+            try
             {
-                output += Convert.ToChar(bytes[i] - 0xF);
+                var output = new StringBuilder(bytes.Length);
+                foreach (var c in bytes)
+                {
+                    output.Append(Convert.ToChar(((c - 0xF) ^ 0xC3) & 0xFF));
+                }
+
+                return output.ToString();
             }
-            return output;
+            catch
+            {
+                return string.Empty;
+            }
         }
     }
 }

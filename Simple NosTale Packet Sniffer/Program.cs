@@ -161,10 +161,12 @@ namespace Simple_NosTale_Packet_Sniffer
                         packetstring = pd.Insert(pd.IndexOf(' ') + 2, " ");
                     }
 
-                    if (packetsplit[1] != "0") // Useless packet its just sended to server to tell TcpCLient is still active
+                    if (packetsplit[1] == "0") // Useless packet its just sended to server to tell TcpCLient is still active
                     {
-                        Console.WriteLine("[WORLD][SEND] {0}", packetstring);
+                        continue;
                     }
+
+                    Console.WriteLine("[WORLD][SEND] {0}", packetstring);
                 }
             }
         }

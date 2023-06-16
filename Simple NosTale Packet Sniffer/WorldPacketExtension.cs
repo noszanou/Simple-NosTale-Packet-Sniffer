@@ -285,6 +285,5 @@ namespace Simple_NosTale_Packet_Sniffer
 
             return decrypted.ToString();
         }
-
     }
 }
